@@ -11,7 +11,7 @@ export const layout = css`
 export const frame = css`
     display: flex;
     box-sizing: border-box;
-    border: 2px solid #747474;
+    border: 3px solid #747474;
     border-radius: 30px;
     padding: 30px;
     width: 1000px;
