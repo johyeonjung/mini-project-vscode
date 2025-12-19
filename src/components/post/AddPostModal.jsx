@@ -7,16 +7,48 @@ import ReactModal from "react-modal";
 import { IoCloudUploadOutline } from "react-icons/io5";
 import { IoIosClose } from "react-icons/io";
 import { useRef, useState } from "react";
+import { createPost } from "../../apis/posts/postsApi";
+import { useCreatePostMutation } from "../../mutations/postMutations";
 ReactModal.setAppElement("#root");
 
 function AddPostModal({isOpen, onRequestClose , layoutRef}) {   
+    const [visibilityOption, setVisibilityOption] = useState({label: "Public", value: "Public"});
+    const [ textareaValue, setTextareaVallue] = useState("");
     const [uploadImages, setUploadImages] = useState([]);
     const imageListBoxRef = useRef();
    const {isLoading, data} = useMeQuery();
+   const createPostMutation = useCreatePostMutation();
 
     const handleOnWheel = (e) => {
         imageListBoxRef.current.scrollLeft +=e.deltaY;
     }
+    const handleImageDeleteOnClick = (index) => {
+        console.log(index);
+        console.log(uploadImages);
+        const deletedImages = uploadImages.filter((img,imgIndex) => imgIndex !== index)
+            setUploadImages(deletedImages);
+        }
+    const handlePostSubmitOnClick = async () => {
+        const formData = new FormData();
+        formData.append("visibility", visibilityOption.value);
+        formData.append("content", textareaValue);
+        for (let img of uploadImages) {
+            formData.append("files", img.file);
+        }
+        try {
+
+            await createPostMutation.mutateAsync(formData);
+            alert("작성 완료");
+        } catch(error) {
+            alert(error.response.data.message);
+        }
+    }
+
+        if(isLoading) {
+            return <Loading />
+        }  
+
+    
     const handleFileLoadOnClick = (e) => {
         const fileInput = document.createElement("input");
         fileInput.setAttribute("type", "file");
@@ -29,6 +61,7 @@ function AddPostModal({isOpen, onRequestClose , layoutRef}) {
 
             const readFile = (file) => new Promise((resolve) => {
             const fileReader = new FileReader();
+            fileReader.readAsDataURL(file);
             fileReader.onload = (e) => {
                 resolve({
                     file,
@@ -43,9 +76,7 @@ function AddPostModal({isOpen, onRequestClose , layoutRef}) {
 
         }
     }
-   if(isLoading) {
-    return <Loading />
-   }
+
 
     return <ReactModal 
         style={{
@@ -70,6 +101,9 @@ function AddPostModal({isOpen, onRequestClose , layoutRef}) {
         parentSelector={() => layoutRef.current}
         appElement={layoutRef.current}
         ariaHideApp={false}>
+            {
+                createPostMutation.isPending && <Loading />
+            }
             <div css={s.modalLayout}>
                 <header>
                     <h2>Add a Post</h2>
@@ -91,9 +125,11 @@ function AddPostModal({isOpen, onRequestClose , layoutRef}) {
                                         label: "Follow",
                                         value: "Follow"
                                     },
-                                ]} />
+                                ]}
+                                value={visibilityOption}
+                                onChange={(option) => setVisibilityOption(option)} />
                     <div css={s.contentInputBox}>
-                        <textarea></textarea>
+                        <textarea onChange={(e) => setTextareaVallue(e.target.value)}></textarea>
                     </div>
                     <div css={s.uploadBox} onClick={handleFileLoadOnClick}>
                         <IoCloudUploadOutline />
@@ -102,9 +138,9 @@ function AddPostModal({isOpen, onRequestClose , layoutRef}) {
                     </div>
                     <div css={s.imageListBox} ref={imageListBoxRef} onWheel={handleOnWheel}>
                             {  
-                                uploadImages.map(img => (
-                                <div css={s.preview(img.dataURL)}>
-                                <div><IoIosClose /></div>
+                                uploadImages.map((img,index) => (
+                                <div key={index} css={s.preview(img.dataURL)}>
+                                <div onClick={() => handleImageDeleteOnClick(index)}><IoIosClose /></div>
                                 </div>
                             ))
                         }
@@ -137,7 +173,7 @@ function AddPostModal({isOpen, onRequestClose , layoutRef}) {
 
                 </main>
                 <footer>
-                    <button css={s.postButton}>Post</button>
+                    <button css={s.postButton} onClick={handlePostSubmitOnClick}>Post</button>
                     <button onClick={onRequestClose}>Cancel</button>
                 </footer>
             </div>
